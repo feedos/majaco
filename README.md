@@ -11,13 +11,13 @@ en tiempo real, en su propia página, cuando quedó confirmada.
 1. **La persona entra al link** (la home `/`) y completa nombre, email y
    cantidad de entradas.
 2. La app le muestra el **alias/CBU** cargado por el organizador y el monto
-   a transferir. La persona transfiere por fuera de la app (Mercado Pago,
-   home banking, etc.) y toca **"Ya transferí"** para avisar.
+   a transferir. La persona transfiere por fuera de la app (home banking,
+   billetera virtual, etc.) y toca **"Ya transferí"** para avisar.
 3. La orden queda como **"Transferencia avisada, a confirmar"**.
 4. El organizador entra a **`/admin`** (con contraseña), ve la lista de
-   gente que avisó que transfirió, chequea en su cuenta/billetera que
-   efectivamente llegó la plata, y hace click en **"Aceptar"** (o
-   "Rechazar" si no llegó nada).
+   gente que avisó que transfirió, chequea en su cuenta que efectivamente
+   llegó la plata, y hace click en **"Aceptar"** (o "Rechazar" si no llegó
+   nada).
 5. La persona, que se quedó en su link personal `/entrada/<token>`, ve **en
    tiempo real** (la página se refresca sola cada pocos segundos) que su
    entrada fue confirmada, junto con un **código y un QR** para mostrar en
@@ -31,77 +31,71 @@ porque es el único lugar donde la persona puede ver el estado de su entrada.
 Si cargás el evento con precio $0, se saltea todo el paso de transferencia:
 la reserva queda directo en "a confirmar" para que la aceptes.
 
-## Requisitos
-
-- Node.js 20+
-
 No hace falta ninguna cuenta de pasarela de pago: el cobro es por
 transferencia directa a tu alias, y vos confirmás cada pago a mano.
 
-## Configuración local
+## Requisitos
+
+- Node.js 20+
+- Una base de datos **Postgres** (ver abajo cómo conseguir una gratis).
+
+## 1) Conseguir una base de datos Postgres gratis
+
+1. Andá a [neon.tech](https://neon.tech) (o [supabase.com](https://supabase.com),
+   cualquiera de los dos sirve) y entrá con tu cuenta de GitHub.
+2. Creá un proyecto nuevo (nombre libre, por ejemplo "majaco").
+3. Copiá el **connection string** que te dan (empieza con `postgresql://...`).
+   En Neon está en el dashboard del proyecto, botón "Connect"; en Supabase
+   en Project Settings → Database → Connection string (modo "URI").
+
+Con eso ya tenés tu `DATABASE_URL`.
+
+## 2) Configuración local (opcional, para probar en tu compu)
 
 ```bash
 npm install
-cp .env.example .env   # ya viene copiado, pero por las dudas
+cp .env.example .env
 ```
 
-Completá `.env`:
-
-| Variable | Para qué sirve |
-| --- | --- |
-| `DATABASE_URL` | Conexión a la base. En local usa SQLite (`file:./dev.db`), no hace falta tocarlo. |
-| `NEXT_PUBLIC_BASE_URL` | URL pública del sitio (se usa para armar el link personal `/entrada/<token>` de cada comprador). En local `http://localhost:3000`. |
-| `ADMIN_PASSWORD` | Contraseña para entrar a `/admin`. Cambiala por una tuya. |
-| `ADMIN_SESSION_SECRET` | Cadena random larga, se usa para firmar la cookie de sesión del admin. Cambiala por algo propio. |
-
-Preparar la base y correr en modo desarrollo:
+Completá `.env` con la `DATABASE_URL` de arriba y una contraseña propia en
+`ADMIN_PASSWORD` / `ADMIN_SESSION_SECRET`. Después:
 
 ```bash
-npx prisma migrate dev
+npx prisma migrate deploy
 npm run dev
 ```
 
 Abrí `http://localhost:3000/admin`, iniciá sesión con `ADMIN_PASSWORD` y
 cargá el evento (nombre, fecha, lugar, precio, capacidad opcional, y tu
-**alias/CBU** para que te transfieran). Ese evento es el que se muestra en
-la home.
+**alias/CBU** para que te transfieran).
 
-## Desplegar en producción
+## 3) Desplegar en Vercel
 
-La app es un proyecto Next.js estándar, lista para **Vercel** (gratis para
-este uso):
+1. Este repo ya está en GitHub. Andá a [vercel.com/new](https://vercel.com/new),
+   entrá con tu cuenta de GitHub e importá el repo `majaco`.
+2. Antes de darle a "Deploy", abrí **"Environment Variables"** y cargá:
 
-1. **Base de datos**: SQLite no sirve en Vercel (el filesystem no persiste
-   entre invocaciones). Creá una base Postgres gratis, por ejemplo en
-   [Neon](https://neon.tech) o [Supabase](https://supabase.com), y copiá su
-   `DATABASE_URL`.
-2. En `prisma/schema.prisma` cambiá:
-   ```prisma
-   datasource db {
-     provider = "sqlite"
-     url      = env("DATABASE_URL")
-   }
-   ```
-   por:
-   ```prisma
-   datasource db {
-     provider = "postgresql"
-     url      = env("DATABASE_URL")
-   }
-   ```
-3. Borrá la carpeta `prisma/migrations` (son migraciones de SQLite) y
-   generá las de Postgres corriendo, con tu `DATABASE_URL` de Postgres en
-   `.env`:
+   | Variable | Valor |
+   | --- | --- |
+   | `DATABASE_URL` | El connection string de Neon/Supabase del paso 1 |
+   | `NEXT_PUBLIC_BASE_URL` | El dominio que te va a dar Vercel, por ejemplo `https://majaco.vercel.app` (podés dejarlo así, editarlo después de desplegar si cambia) |
+   | `ADMIN_PASSWORD` | Una contraseña tuya para entrar a `/admin` |
+   | `ADMIN_SESSION_SECRET` | Cualquier texto largo y random (por ejemplo, generalo en [1password.com/password-generator](https://1password.com/password-generator/) o similar) |
+
+3. Click en **Deploy** y esperá que termine (1-2 minutos).
+4. Una vez desplegado, entrá una sola vez por SSH/terminal a crear las
+   tablas en tu base (Vercel no corre migraciones solo). Lo más simple es
+   hacerlo desde tu compu, apuntando a la misma `DATABASE_URL` de
+   producción:
    ```bash
-   npx prisma migrate dev --name init
+   DATABASE_URL="tu-connection-string-de-neon-o-supabase" npx prisma migrate deploy
    ```
-4. Subí el repo a GitHub e importalo en [Vercel](https://vercel.com/new).
-5. En Vercel, configurá las variables de entorno (`DATABASE_URL`,
-   `NEXT_PUBLIC_BASE_URL` con tu dominio final, `ADMIN_PASSWORD`,
-   `ADMIN_SESSION_SECRET`).
-6. Desplegá. Entrá a `/admin` en tu dominio para cargar el evento (incluido
-   tu alias de transferencia), y compartí el link de la home con quien
-   quiera comprar entradas.
+5. Entrá a tu dominio de Vercel → `/admin`, cargá el evento (con tu
+   alias/CBU) y compartí el link de la home con quien quiera comprar
+   entradas.
+
+Cada vez que se haga `git push` a la rama conectada, Vercel vuelve a
+desplegar solo.
 
 ## Panel de administración (`/admin`)
 

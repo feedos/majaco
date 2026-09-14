@@ -1,36 +1,42 @@
+-- CreateEnum
+CREATE TYPE "OrderStatus" AS ENUM ('PENDING_PAYMENT', 'PAID_PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'CANCELLED');
+
 -- CreateTable
 CREATE TABLE "Event" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "location" TEXT NOT NULL,
-    "date" DATETIME NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
     "priceCents" INTEGER NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'ARS',
     "capacity" INTEGER,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "transferAlias" TEXT NOT NULL DEFAULT '',
+    "accountHolder" TEXT NOT NULL DEFAULT '',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Event_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Order" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "eventId" TEXT NOT NULL,
     "buyerName" TEXT NOT NULL,
     "buyerEmail" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 1,
-    "status" TEXT NOT NULL DEFAULT 'PENDING_PAYMENT',
+    "status" "OrderStatus" NOT NULL DEFAULT 'PENDING_PAYMENT',
     "personalToken" TEXT NOT NULL,
     "ticketCode" TEXT,
-    "mpPreferenceId" TEXT,
-    "mpPaymentId" TEXT,
     "amountCents" INTEGER NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'ARS',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "paidAt" DATETIME,
-    "approvedAt" DATETIME,
-    "rejectedAt" DATETIME,
-    CONSTRAINT "Order_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "declaredPaidAt" TIMESTAMP(3),
+    "approvedAt" TIMESTAMP(3),
+    "rejectedAt" TIMESTAMP(3),
+
+    CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -47,3 +53,6 @@ CREATE INDEX "Order_eventId_idx" ON "Order"("eventId");
 
 -- CreateIndex
 CREATE INDEX "Order_status_idx" ON "Order"("status");
+
+-- AddForeignKey
+ALTER TABLE "Order" ADD CONSTRAINT "Order_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
