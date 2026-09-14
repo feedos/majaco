@@ -12,6 +12,8 @@ type EventData = {
   priceCents: number;
   currency: string;
   capacity: number | null;
+  transferAlias: string;
+  accountHolder: string;
 };
 
 function toDateTimeLocal(iso: string) {
@@ -42,6 +44,8 @@ export default function EventEditor({
     price: "0",
     currency: "ARS",
     capacity: "",
+    transferAlias: "",
+    accountHolder: "",
   });
 
   useEffect(() => {
@@ -58,6 +62,8 @@ export default function EventEditor({
             price: String(data.event.priceCents / 100),
             currency: data.event.currency,
             capacity: data.event.capacity != null ? String(data.event.capacity) : "",
+            transferAlias: data.event.transferAlias ?? "",
+            accountHolder: data.event.accountHolder ?? "",
           });
           setCollapsed(true);
         }
@@ -83,6 +89,8 @@ export default function EventEditor({
           priceCents: Math.round(Number(form.price) * 100),
           currency: form.currency,
           capacity: form.capacity === "" ? null : Number(form.capacity),
+          transferAlias: form.transferAlias,
+          accountHolder: form.accountHolder,
         }),
       });
       const data = await res.json();
@@ -197,6 +205,29 @@ export default function EventEditor({
           placeholder="Sin límite"
           value={form.capacity}
           onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+        />
+
+        <div className="divider" />
+
+        <label htmlFor="transferAlias">Alias o CBU para transferencias</label>
+        <input
+          id="transferAlias"
+          placeholder="fiesta.majaco.mp"
+          required={Number(form.price) > 0}
+          value={form.transferAlias}
+          onChange={(e) => setForm({ ...form, transferAlias: e.target.value })}
+        />
+        <p className="hint" style={{ marginTop: -8, marginBottom: 0 }}>
+          Esto es lo que va a ver cada comprador para transferirte. Vos confirmás cada pago
+          a mano desde la lista de compradores.
+        </p>
+
+        <label htmlFor="accountHolder">Titular de la cuenta (opcional)</label>
+        <input
+          id="accountHolder"
+          placeholder="Nombre del titular"
+          value={form.accountHolder}
+          onChange={(e) => setForm({ ...form, accountHolder: e.target.value })}
         />
 
         <div className="btn-row">

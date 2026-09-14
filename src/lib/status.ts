@@ -1,8 +1,8 @@
 import type { OrderStatus } from "@prisma/client";
 
 export const STATUS_LABEL: Record<OrderStatus, string> = {
-  PENDING_PAYMENT: "Pendiente de pago",
-  PAID_PENDING_APPROVAL: "Pagado, esperando confirmación",
+  PENDING_PAYMENT: "Esperando transferencia",
+  PAID_PENDING_APPROVAL: "Transferencia avisada, a confirmar",
   APPROVED: "Confirmada",
   REJECTED: "Rechazada",
   CANCELLED: "Cancelada",

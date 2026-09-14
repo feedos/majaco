@@ -3,16 +3,23 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 
-const bodySchema = z.object({
-  id: z.string().optional(),
-  name: z.string().trim().min(2).max(140),
-  description: z.string().trim().max(2000).optional().default(""),
-  location: z.string().trim().min(2).max(200),
-  date: z.string().min(1),
-  priceCents: z.coerce.number().int().min(0),
-  currency: z.string().trim().min(3).max(3).default("ARS"),
-  capacity: z.coerce.number().int().min(0).optional().nullable(),
-});
+const bodySchema = z
+  .object({
+    id: z.string().optional(),
+    name: z.string().trim().min(2).max(140),
+    description: z.string().trim().max(2000).optional().default(""),
+    location: z.string().trim().min(2).max(200),
+    date: z.string().min(1),
+    priceCents: z.coerce.number().int().min(0),
+    currency: z.string().trim().min(3).max(3).default("ARS"),
+    capacity: z.coerce.number().int().min(0).optional().nullable(),
+    transferAlias: z.string().trim().max(120).optional().default(""),
+    accountHolder: z.string().trim().max(120).optional().default(""),
+  })
+  .refine((data) => data.priceCents === 0 || data.transferAlias.length >= 2, {
+    message: "Ingresá el alias/CBU para recibir las transferencias",
+    path: ["transferAlias"],
+  });
 
 function slugify(name: string) {
   return (
@@ -64,6 +71,8 @@ export async function POST(req: NextRequest) {
     priceCents: parsed.priceCents,
     currency: parsed.currency.toUpperCase(),
     capacity: parsed.capacity ?? null,
+    transferAlias: parsed.transferAlias,
+    accountHolder: parsed.accountHolder,
   };
 
   if (parsed.id) {

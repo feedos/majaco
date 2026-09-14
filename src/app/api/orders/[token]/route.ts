@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/prisma";
-import { syncOrderWithMercadoPago } from "@/lib/order-payment";
 
 export async function GET(
   _req: NextRequest,
@@ -9,18 +8,13 @@ export async function GET(
 ) {
   const { token } = await params;
 
-  let order = await prisma.order.findUnique({
+  const order = await prisma.order.findUnique({
     where: { personalToken: token },
     include: { event: true },
   });
 
   if (!order) {
     return NextResponse.json({ error: "No encontramos esa entrada" }, { status: 404 });
-  }
-
-  if (order.status === "PENDING_PAYMENT") {
-    const updated = await syncOrderWithMercadoPago(order.id);
-    if (updated) order = { ...order, ...updated };
   }
 
   let qrDataUrl: string | null = null;
@@ -36,7 +30,10 @@ export async function GET(
     currency: order.currency,
     ticketCode: order.status === "APPROVED" ? order.ticketCode : null,
     qrDataUrl,
-    checkoutUrl: order.status === "PENDING_PAYMENT" ? order.mpInitPoint : null,
+    transfer:
+      order.status === "PENDING_PAYMENT"
+        ? { alias: order.event.transferAlias, accountHolder: order.event.accountHolder }
+        : null,
     event: {
       name: order.event.name,
       date: order.event.date,

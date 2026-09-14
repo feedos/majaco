@@ -13,7 +13,7 @@ type OrderInfo = {
   currency: string;
   ticketCode: string | null;
   qrDataUrl: string | null;
-  checkoutUrl: string | null;
+  transfer: { alias: string; accountHolder: string } | null;
   event: { name: string; date: string; location: string };
 };
 
@@ -24,6 +24,9 @@ export default function TicketStatus({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
   const [justApproved, setJustApproved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [aliasCopied, setAliasCopied] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
+  const [markPaidError, setMarkPaidError] = useState<string | null>(null);
   const prevStatus = useRef<OrderStatus | null>(null);
   const originalTitle = useRef<string | null>(null);
 
@@ -110,6 +113,32 @@ export default function TicketStatus({ token }: { token: string }) {
     }
   }
 
+  async function copyAlias(alias: string) {
+    try {
+      await navigator.clipboard.writeText(alias);
+      setAliasCopied(true);
+      setTimeout(() => setAliasCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleMarkPaid() {
+    setMarkingPaid(true);
+    setMarkPaidError(null);
+    try {
+      const res = await fetch(`/api/orders/${token}/mark-paid`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No pudimos avisarle al organizador");
+      setOrder((prev) => (prev ? { ...prev, status: "PAID_PENDING_APPROVAL" } : prev));
+      prevStatus.current = "PAID_PENDING_APPROVAL";
+    } catch (err) {
+      setMarkPaidError(err instanceof Error ? err.message : "Error inesperado");
+    } finally {
+      setMarkingPaid(false);
+    }
+  }
+
   if (error && !order) {
     return (
       <main className="page">
@@ -161,17 +190,51 @@ export default function TicketStatus({ token }: { token: string }) {
 
         <div className="divider" />
 
-        {order.status === "PENDING_PAYMENT" && (
+        {order.status === "PENDING_PAYMENT" && order.transfer && (
           <div>
-            <p>Todavía no completaste el pago.</p>
-            {order.checkoutUrl ? (
-              <a className="btn btn-primary" href={order.checkoutUrl}>
-                Pagar con Mercado Pago
-              </a>
+            <p>
+              Hacé una transferencia por{" "}
+              <strong>
+                {order.amountCents === 0
+                  ? "Gratis"
+                  : formatMoney(order.amountCents, order.currency)}
+              </strong>{" "}
+              a este alias:
+            </p>
+            {order.transfer.alias ? (
+              <>
+                <div className="copy-row">
+                  <input readOnly value={order.transfer.alias} />
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    onClick={() => copyAlias(order.transfer!.alias)}
+                  >
+                    {aliasCopied ? "¡Copiado!" : "Copiar"}
+                  </button>
+                </div>
+                {order.transfer.accountHolder && (
+                  <p className="hint">Titular: {order.transfer.accountHolder}</p>
+                )}
+                <p className="hint">
+                  Cuando termines de transferir, avisale al organizador para que la
+                  confirme:
+                </p>
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  disabled={markingPaid}
+                  onClick={handleMarkPaid}
+                  style={{ marginTop: 10 }}
+                >
+                  {markingPaid ? "Avisando..." : "Ya transferí"}
+                </button>
+                {markPaidError && <p className="error-text">{markPaidError}</p>}
+              </>
             ) : (
               <p className="error-text">
-                No pudimos generar el link de pago. Volvé a intentar desde el inicio o
-                contactá al organizador.
+                El organizador todavía no cargó el alias para transferir. Contactalo
+                directamente para coordinar el pago.
               </p>
             )}
           </div>
@@ -180,8 +243,8 @@ export default function TicketStatus({ token }: { token: string }) {
         {order.status === "PAID_PENDING_APPROVAL" && (
           <div className="center">
             <p className="pulse" style={{ fontSize: 15 }}>
-              💳 Pago recibido. El organizador tiene que confirmar tu entrada, esta página se
-              actualiza sola apenas lo haga.
+              💸 Avisamos al organizador que ya transferiste. Esta página se actualiza sola
+              apenas confirme que la recibió.
             </p>
           </div>
         )}

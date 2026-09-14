@@ -94,7 +94,7 @@ export default function BuyForm({
 
       <button className="btn btn-primary" type="submit" disabled={loading} style={{ marginTop: 14 }}>
         {loading && <span className="spinner" />}
-        {loading ? "Procesando..." : total === 0 ? "Reservar entrada" : "Continuar al pago"}
+        {loading ? "Procesando..." : total === 0 ? "Reservar entrada" : "Reservar y ver cómo transferir"}
       </button>
 
       {error && <p className="error-text">{error}</p>}

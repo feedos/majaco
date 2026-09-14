@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getPreferenceClient } from "@/lib/mercadopago";
 
 const bodySchema = z.object({
   eventId: z.string().min(1),
@@ -9,10 +8,6 @@ const bodySchema = z.object({
   buyerEmail: z.string().trim().email("Ingresá un email válido"),
   quantity: z.coerce.number().int().min(1).max(10),
 });
-
-function getBaseUrl(req: NextRequest) {
-  return process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
-}
 
 export async function POST(req: NextRequest) {
   let parsed;
@@ -60,76 +55,17 @@ export async function POST(req: NextRequest) {
       quantity: parsed.quantity,
       amountCents,
       currency: event.currency,
+      // Evento gratuito: no hace falta transferencia, pasa directo a revisión.
+      ...(amountCents <= 0
+        ? { status: "PAID_PENDING_APPROVAL", declaredPaidAt: new Date() }
+        : {}),
     },
   });
 
-  const baseUrl = getBaseUrl(req);
-  const entradaUrl = `${baseUrl}/entrada/${order.personalToken}`;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
 
-  if (amountCents <= 0) {
-    // Evento gratuito: no hace falta pasar por Mercado Pago.
-    const updated = await prisma.order.update({
-      where: { id: order.id },
-      data: { status: "PAID_PENDING_APPROVAL", paidAt: new Date() },
-    });
-    return NextResponse.json({
-      token: updated.personalToken,
-      entradaUrl,
-      checkoutUrl: null,
-    });
-  }
-
-  try {
-    const preference = await getPreferenceClient().create({
-      body: {
-        items: [
-          {
-            id: event.id,
-            title: `Entrada - ${event.name}`,
-            quantity: parsed.quantity,
-            unit_price: event.priceCents / 100,
-            currency_id: event.currency,
-          },
-        ],
-        payer: {
-          name: parsed.buyerName,
-          email: parsed.buyerEmail,
-        },
-        external_reference: order.id,
-        back_urls: {
-          success: entradaUrl,
-          failure: entradaUrl,
-          pending: entradaUrl,
-        },
-        auto_return: "approved",
-        notification_url: `${baseUrl}/api/mercadopago/webhook`,
-        statement_descriptor: "ENTRADAS FIESTA",
-      },
-    });
-
-    const checkoutUrl = preference.init_point ?? preference.sandbox_init_point ?? null;
-
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { mpPreferenceId: preference.id, mpInitPoint: checkoutUrl },
-    });
-
-    return NextResponse.json({
-      token: order.personalToken,
-      entradaUrl,
-      checkoutUrl,
-    });
-  } catch (err) {
-    console.error("Error creando preferencia de Mercado Pago", err);
-    return NextResponse.json(
-      {
-        token: order.personalToken,
-        entradaUrl,
-        checkoutUrl: null,
-        error:
-          "No se pudo iniciar el pago con Mercado Pago. Verificá la configuración de MERCADOPAGO_ACCESS_TOKEN.",
-      },
-      { status: 502 }
-    );
-  }
+  return NextResponse.json({
+    token: order.personalToken,
+    entradaUrl: `${baseUrl}/entrada/${order.personalToken}`,
+  });
 }

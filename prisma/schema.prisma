@@ -16,17 +16,19 @@ enum OrderStatus {
 }
 
 model Event {
-  id          String   @id @default(uuid())
-  slug        String   @unique
-  name        String
-  description String
-  location    String
-  date        DateTime
-  priceCents  Int
-  currency    String   @default("ARS")
-  capacity    Int?
-  createdAt   DateTime @default(now())
-  orders      Order[]
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  name          String
+  description   String
+  location      String
+  date          DateTime
+  priceCents    Int
+  currency      String   @default("ARS")
+  capacity      Int?
+  transferAlias String   @default("")
+  accountHolder String   @default("")
+  createdAt     DateTime @default(now())
+  orders        Order[]
 }
 
 model Order {
@@ -39,13 +41,10 @@ model Order {
   status            OrderStatus @default(PENDING_PAYMENT)
   personalToken     String      @unique @default(uuid())
   ticketCode        String?     @unique
-  mpPreferenceId    String?
-  mpInitPoint       String?
-  mpPaymentId       String?
   amountCents       Int
   currency          String      @default("ARS")
   createdAt         DateTime    @default(now())
-  paidAt            DateTime?
+  declaredPaidAt    DateTime?
   approvedAt        DateTime?
   rejectedAt        DateTime?
 
