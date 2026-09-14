@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID_PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  name        String
+  description String
+  location    String
+  date        DateTime
+  priceCents  Int
+  currency    String   @default("ARS")
+  capacity    Int?
+  createdAt   DateTime @default(now())
+  orders      Order[]
+}
+
+model Order {
+  id                String      @id @default(uuid())
+  event             Event       @relation(fields: [eventId], references: [id])
+  eventId           String
+  buyerName         String
+  buyerEmail        String
+  quantity          Int         @default(1)
+  status            OrderStatus @default(PENDING_PAYMENT)
+  personalToken     String      @unique @default(uuid())
+  ticketCode        String?     @unique
+  mpPreferenceId    String?
+  mpInitPoint       String?
+  mpPaymentId       String?
+  amountCents       Int
+  currency          String      @default("ARS")
+  createdAt         DateTime    @default(now())
+  paidAt            DateTime?
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+
+  @@index([eventId])
+  @@index([status])
+}
