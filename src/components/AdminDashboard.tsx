@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import EventEditor from "@/components/EventEditor";
 import OrdersTable, { type AdminOrder } from "@/components/OrdersTable";
 
@@ -101,9 +102,14 @@ export default function AdminDashboard() {
           <p className="eyebrow">Panel de organizador</p>
           <h1 style={{ marginBottom: 0 }}>Entradas de la fiesta</h1>
         </div>
-        <button className="btn btn-secondary" style={{ width: "auto" }} onClick={handleLogout}>
-          Cerrar sesión
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Link href="/admin/escanear" className="btn btn-primary" style={{ width: "auto" }}>
+            Escanear entradas
+          </Link>
+          <button className="btn btn-secondary" style={{ width: "auto" }} onClick={handleLogout}>
+            Cerrar sesión
+          </button>
+        </div>
       </div>
 
       <EventEditor />

@@ -14,6 +14,7 @@ export type AdminOrder = {
   currency: string;
   status: OrderStatus;
   ticketCode: string | null;
+  usedAt: string | null;
   createdAt: string;
   event: { name: string };
 };
@@ -106,6 +107,11 @@ export default function OrdersTable({
                   </td>
                   <td style={{ fontFamily: "var(--font-geist-mono), monospace" }}>
                     {order.ticketCode ?? "—"}
+                    {order.usedAt && (
+                      <div style={{ color: "var(--success)", fontSize: 12, marginTop: 2 }}>
+                        ✅ Ingresó
+                      </div>
+                    )}
                   </td>
                   <td>
                     {order.status === "PAID_PENDING_APPROVAL" && (

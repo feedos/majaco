@@ -111,6 +111,21 @@ desplegar solo.
 - La lista se refresca sola cada pocos segundos y avisa (parpadeo del
   título de la pestaña) cuando entra una reserva nueva para revisar.
 
+## Escanear entradas en la puerta (`/admin/escanear`)
+
+Desde el botón **"Escanear entradas"** del panel (o yendo directo a
+`/admin/escanear`) se abre la cámara del celular para leer el QR de cada
+entrada:
+
+- **✅ Verde**: entrada válida, la marca como usada (queda "Ingresó" en la
+  lista de `/admin`).
+- **⚠️ Ya usada**: ese QR ya había entrado antes (evita que reingresen con
+  una captura de pantalla reenviada).
+- **❌ Inválido**: el código no corresponde a ninguna entrada confirmada.
+
+El navegador va a pedir permiso de cámara la primera vez; tiene que ser
+sobre **HTTPS** (Vercel ya lo sirve así) para que funcione.
+
 ## Notas y límites conocidos
 
 - El pago no se verifica automáticamente: el "Ya transferí" del comprador
@@ -119,8 +134,9 @@ desplegar solo.
   aceptar una orden.
 - Se genera **un código/QR por orden**, no uno por entrada individual: si
   alguien compra 3 entradas en una sola reserva, ese código representa las
-  3 juntas. Si necesitás control de acceso persona por persona, se puede
-  extender fácilmente generando N códigos por orden.
+  3 juntas y un solo escaneo las marca todas como ingresadas. Si necesitás
+  control de acceso persona por persona, se puede extender fácilmente
+  generando N códigos por orden.
 - La verificación de disponibilidad (`capacity`) es a nivel evento único;
   el proyecto está pensado para un solo evento activo a la vez (el más
   reciente cargado en `/admin`).

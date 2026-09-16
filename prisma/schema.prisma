@@ -47,6 +47,7 @@ model Order {
   declaredPaidAt    DateTime?
   approvedAt        DateTime?
   rejectedAt        DateTime?
+  usedAt            DateTime?
 
   @@index([eventId])
   @@index([status])
