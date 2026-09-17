@@ -37,8 +37,8 @@ export async function GET() {
   const unauthorized = await requireAdmin();
   if (unauthorized) return unauthorized;
 
-  const event = await prisma.event.findFirst({ orderBy: { createdAt: "desc" } });
-  return NextResponse.json({ event });
+  const events = await prisma.event.findMany({ orderBy: { date: "asc" } });
+  return NextResponse.json({ events });
 }
 
 export async function POST(req: NextRequest) {

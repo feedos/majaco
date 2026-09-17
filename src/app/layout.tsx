@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Entradas para la fiesta",
+  title: "Entradas para tus eventos",
   description: "Comprá tu entrada online",
 };
 

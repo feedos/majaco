@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-type EventData = {
+export type EventData = {
   id: string;
   slug: string;
   name: string;
@@ -25,51 +25,29 @@ function toDateTimeLocal(iso: string) {
 }
 
 export default function EventEditor({
+  event,
   onSaved,
+  onCancel,
 }: {
-  onSaved?: (event: EventData) => void;
+  event: EventData | null;
+  onSaved: (event: EventData) => void;
+  onCancel: () => void;
 }) {
-  const [event, setEvent] = useState<EventData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
 
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    location: "",
-    date: "",
-    price: "0",
-    currency: "ARS",
-    capacity: "",
-    transferAlias: "",
-    accountHolder: "",
-  });
-
-  useEffect(() => {
-    fetch("/api/admin/event")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.event) {
-          setEvent(data.event);
-          setForm({
-            name: data.event.name,
-            description: data.event.description ?? "",
-            location: data.event.location,
-            date: toDateTimeLocal(data.event.date),
-            price: String(data.event.priceCents / 100),
-            currency: data.event.currency,
-            capacity: data.event.capacity != null ? String(data.event.capacity) : "",
-            transferAlias: data.event.transferAlias ?? "",
-            accountHolder: data.event.accountHolder ?? "",
-          });
-          setCollapsed(true);
-        }
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const [form, setForm] = useState(() => ({
+    name: event?.name ?? "",
+    description: event?.description ?? "",
+    location: event?.location ?? "",
+    date: event ? toDateTimeLocal(event.date) : "",
+    price: event ? String(event.priceCents / 100) : "0",
+    currency: event?.currency ?? "ARS",
+    capacity: event?.capacity != null ? String(event.capacity) : "",
+    transferAlias: event?.transferAlias ?? "",
+    accountHolder: event?.accountHolder ?? "",
+  }));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -95,10 +73,8 @@ export default function EventEditor({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo guardar el evento");
-      setEvent(data.event);
       setSuccess(true);
-      setCollapsed(true);
-      onSaved?.(data.event);
+      onSaved(data.event);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado");
     } finally {
@@ -106,41 +82,31 @@ export default function EventEditor({
     }
   }
 
-  if (loading) {
-    return (
-      <div className="card">
-        <span className="spinner" />
-      </div>
-    );
-  }
-
-  if (collapsed && event) {
-    return (
-      <div className="card">
-        <div className="top-bar">
-          <div>
-            <p className="eyebrow">Evento</p>
-            <h2 style={{ marginBottom: 0 }}>{event.name}</h2>
-          </div>
-          <button className="btn btn-secondary" style={{ width: "auto" }} onClick={() => setCollapsed(false)}>
-            Editar
-          </button>
-        </div>
-        <p className="hint">
-          Link para compartir:{" "}
-          <a href="/" target="_blank" rel="noreferrer">
-            {typeof window !== "undefined" ? window.location.origin : ""}/
-          </a>
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="card">
-      <h2>{event ? "Editar evento" : "Crear evento"}</h2>
+      <div className="top-bar">
+        <h2 style={{ marginBottom: 0 }}>{event ? "Editar evento" : "Crear evento"}</h2>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ width: "auto" }}
+          onClick={onCancel}
+        >
+          Volver
+        </button>
+      </div>
+
+      {event && (
+        <p className="hint" style={{ marginTop: 0 }}>
+          Link para compartir:{" "}
+          <a href={`/${event.slug}`} target="_blank" rel="noreferrer">
+            {typeof window !== "undefined" ? window.location.origin : ""}/{event.slug}
+          </a>
+        </p>
+      )}
+
       <form onSubmit={handleSubmit}>
-        <label htmlFor="name">Nombre de la fiesta</label>
+        <label htmlFor="name">Nombre del evento</label>
         <input
           id="name"
           required
@@ -234,15 +200,6 @@ export default function EventEditor({
           <button className="btn btn-primary" type="submit" disabled={saving}>
             {saving ? "Guardando..." : "Guardar evento"}
           </button>
-          {event && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setCollapsed(true)}
-            >
-              Cancelar
-            </button>
-          )}
         </div>
         {error && <p className="error-text">{error}</p>}
         {success && <p className="success-text">Evento guardado.</p>}
